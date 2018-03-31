@@ -10,5 +10,7 @@ class PassOne {
 
 };
 
-
+namespace PassOne {
+    std::string run(std::string filename);
+}
 #endif //SICXE_ASSEMBLER_PASSONE_H
