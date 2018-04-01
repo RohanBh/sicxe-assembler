@@ -21,10 +21,10 @@ MID                 LDA      #3
 					COMPR	 X,B
 					JLT		 LOOP
 
-					STS      ODD 				STORE number of odd integers at ODD location 
-					STT      EVEN 				STORE number of even integers at EVEN location
+					STS      ODD 				. STORE number of odd integers at ODD location
+					STT      EVEN 				. STORE number of even integers at EVEN location
 
-					RSUB 						terminate the program and RETURN the control to OS
+					RSUB 						. terminate the program and RETURN the control to OS
 
 . The numbers are stored at location ARRY
 ARRY                BYTE     X'79A0B1126A703680C51273902AAB10'

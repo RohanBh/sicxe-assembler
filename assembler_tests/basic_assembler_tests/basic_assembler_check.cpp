@@ -12,12 +12,16 @@ const std::string RELATIVE_PATH = "../assembler_tests/basic_assembler_tests/";
 
 bool compareFiles(const std::string& p1, const std::string& p2);
 
-TEST(basic_check, test_file_equal) {
-    std::string intermediate = PassOne::run(RELATIVE_PATH + "EvenOddSeparator.asm");
-    std::string objectFile = PassTwo::run(intermediate);
+TEST(basic_check, test_optab) {
+    EXPECT_EQ(initOpTab("/home/rohan/CLionProjects/sicxe_assembler/assembler/"), 61);
+    EXPECT_EQ(initSymTab("/home/rohan/CLionProjects/sicxe_assembler/assembler/"), 9);
+}
 
-    std::string fullPath = realpath("EvenOddSeparator.txt", NULL);
-    EXPECT_TRUE(compareFiles(objectFile, fullPath));
+TEST(basic_check, test_file_equal) {
+    std::string intermediate = createIntermediate("/home/rohan/CLionProjects/sicxe_assembler/assembler_tests/basic_assembler_tests/EvenOddSeparator.asm");
+    std::string objectFile = createObjectFile(intermediate);
+
+    EXPECT_TRUE(compareFiles(objectFile, "EvenOddSeparator.txt"));
 }
 
 bool compareFiles(const std::string &p1, const std::string &p2) {

@@ -5,12 +5,12 @@
 #ifndef SICXE_ASSEMBLER_PASSONE_H
 #define SICXE_ASSEMBLER_PASSONE_H
 
+#include <string>
 
-class PassOne {
+std::string createIntermediate(std::string filename);
 
-};
+int initOpTab(std::string projectRoot);
 
-namespace PassOne {
-    std::string run(std::string filename);
-}
+int initSymTab(std::string projectRoot);
+
 #endif //SICXE_ASSEMBLER_PASSONE_H

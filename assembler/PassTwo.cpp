@@ -3,3 +3,7 @@
 //
 
 #include "PassTwo.h"
+
+std::string createObjectFile(std::string filename){
+    return "";
+}
