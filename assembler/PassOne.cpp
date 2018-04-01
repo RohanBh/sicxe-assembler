@@ -12,8 +12,6 @@
 
 using namespace std;
 
-basic_istream<char, char_traits<char>> &readLine(ifstream &fin, vector<string> &parts);
-
 void printLine(ostream &fout, int locctr, vector<string> &line) {
     std::string outLine = intToHexStr(locctr) + " ";
     for (auto const &s : line) {
@@ -28,10 +26,10 @@ std::string createIntermediate(std::string filename) {
 
     vector<string> line;
     ifstream fin(filename.c_str());
-    string temp = filename + "_intermediate.txt";
-    ofstream fout(temp.c_str());
+    string outFile = filename + "_intermediate.txt";
+    ofstream fout(outFile.c_str());
     string opcode, operand, label;
-    int startAddr = 0;
+    startAddr = 0;
     int locctr = 0;
 
     while (fin.is_open() && readLine(fin, line)) {
@@ -49,10 +47,10 @@ std::string createIntermediate(std::string filename) {
         } else if (line.size() == 2) {
             opcode = line[0];
             operand = line[1];
-            if (OPTAB.find(opcode) == OPTAB.end()) {
+            if (OPTAB.safeFind(opcode) == OPTAB.end()) {
                 label = line[0];
                 opcode = line[1];
-                if (OPTAB.find(opcode) == OPTAB.end()) {
+                if (OPTAB.safeFind(opcode) == OPTAB.end()) {
                     cerr << "Undefined Line\n";
                     printLine(cout, oldlocctr, line);
                 }
@@ -64,10 +62,17 @@ std::string createIntermediate(std::string filename) {
             startAddr = hexStrToInt(operand);
             locctr = startAddr;
             printLine(fout, oldlocctr, line);
+            programName = label;
+            if (programName.empty()) {
+                programName = filename;
+            }
             continue;
         } else if (opcode == "END") {
             printLine(fout, oldlocctr, line);
             break;
+        } else if (opcode == "BASE" || opcode == "NOBASE") {
+            printLine(fout, oldlocctr, line);
+            continue;
         } else {
             if (!label.empty()) {
                 if (SYMTAB.find(label) != SYMTAB.end()) {
@@ -77,7 +82,7 @@ std::string createIntermediate(std::string filename) {
                     SYMTAB.insert(pss(label, intToHexStr(locctr)));
                 }
             }
-            auto it = OPTAB.find(opcode);
+            auto it = OPTAB.safeFind(opcode);
             if (it != OPTAB.end()) {
                 pss info = it->second;
                 if (info.first == "3/4") {
@@ -112,24 +117,10 @@ std::string createIntermediate(std::string filename) {
             continue;
         }
     }
-    int programLength = locctr - startAddr;
-    fout << "length=" << programLength;
-    string retVal = fout.is_open() ? temp : "Not created";
+    programLength = locctr - startAddr;
+    string retVal = fout.is_open() ? outFile : "Not created";
     fout.close();
     fin.close();
     return retVal;
 }
 
-basic_istream<char, char_traits<char>> &readLine(ifstream &fin, vector<string> &parts) {
-    parts.clear();
-    string line, temp;
-    basic_istream<char, char_traits<char>> &retVal = getline(fin, line);
-    stringstream s(line);
-    while (s >> temp) {
-        if (temp[0] == '.') {
-            break;
-        }
-        parts.push_back(temp);
-    }
-    return retVal;
-}

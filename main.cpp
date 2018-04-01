@@ -1,7 +1,11 @@
 #include <iostream>
 #include <PassOne.h>
+#include <PassTwo.h>
 
 int main() {
-    createIntermediate("/home/rohan/CLionProjects/sicxe_assembler/assembler_tests/basic_assembler_tests/EvenOddSeparator.asm");
+    std::string intermediate =
+            createIntermediate(
+                    "/home/rohan/CLionProjects/sicxe_assembler/assembler_tests/basic_assembler_tests/EvenOddSeparator.asm");
+    createObjectFile(intermediate);
     return 0;
 }

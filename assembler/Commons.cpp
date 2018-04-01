@@ -2,16 +2,24 @@
 // Created by rohan on 1/4/18.
 //
 
+#include <vector>
 #include "PassOne.h"
 #include "Commons.h"
-#include <fstream>
+#include "Utils.h"
+#include <sstream>
 
 using namespace std;
 
 string *split(string line);
 
+basic_istream<char, char_traits<char>> &readLine(ifstream &fin, vector<string> &parts);
+
 std::map<std::string, pss > OPTAB;
 std::map<std::string, std::string> SYMTAB;
+
+string programName;
+int startAddr;
+int programLength;
 
 int initOpTab(string projectRoot) {
     if (!OPTAB.empty()) {
@@ -50,7 +58,7 @@ int initSymTab(string projectRoot) {
 }
 
 string *split(string line) {
-    std::string delimiter = " ";
+    string delimiter = " ";
     size_t pos = 0;
     int i = 0;
     string token;
@@ -62,4 +70,19 @@ string *split(string line) {
     }
     values[i] = line;
     return values;
+}
+
+basic_istream<char, char_traits<char>> &readLine(ifstream &fin, vector<string> &parts) {
+    parts.clear();
+    string line, temp;
+    basic_istream<char, char_traits<char>> &retVal = getline(fin, line);
+    stringstream s(line);
+    while (s >> temp) {
+        if (temp[0] == '.') {
+            break;
+        }
+        trim(temp);
+        parts.push_back(temp);
+    }
+    return retVal;
 }
