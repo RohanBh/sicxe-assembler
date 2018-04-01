@@ -4,24 +4,13 @@
 
 #include "PassOne.h"
 #include "Utils.h"
-#include <map>
+#include "Commons.h"
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include <sstream>
 
-#define pss pair<string, string>
-
 using namespace std;
-
-std::map<string, pss > OPTAB;
-std::map<string, string> SYMTAB;
-
-int initOpTab(string projectRoot);
-
-int initSymTab(string projectRoot);
-
-string *split(string line);
 
 basic_istream<char, char_traits<char>> &readLine(ifstream &fin, vector<string> &parts);
 
@@ -129,51 +118,6 @@ std::string createIntermediate(std::string filename) {
     fout.close();
     fin.close();
     return retVal;
-}
-
-int initOpTab(string projectRoot) {
-    ifstream fin(projectRoot + "opcodes.txt");
-    if (fin.is_open()) {
-        std::string line;
-        while (getline(fin, line)) {
-            string *parts = split(line);
-            auto val = pair<string, pss >(parts[0], pss(parts[1], parts[2]));
-            OPTAB.insert(val);
-        }
-        fin.close();
-        return (int) OPTAB.size();
-    }
-    return -1;
-}
-
-int initSymTab(string projectRoot) {
-    ifstream fin(projectRoot + "symbols.txt");
-    if (fin.is_open()) {
-        std::string line;
-        while (getline(fin, line)) {
-            string *parts = split(line);
-            auto val = pair<string, string>(parts[0], parts[1]);
-            SYMTAB.insert(val);
-        }
-        fin.close();
-        return (int) SYMTAB.size();
-    }
-    return -1;
-}
-
-string *split(string line) {
-    std::string delimiter = " ";
-    size_t pos = 0;
-    int i = 0;
-    string token;
-    auto values = new string[3];
-    while ((pos = line.find(delimiter)) != string::npos) {
-        token = line.substr(0, pos);
-        values[i++] = token;
-        line.erase(0, pos + delimiter.length());
-    }
-    values[i] = line;
-    return values;
 }
 
 basic_istream<char, char_traits<char>> &readLine(ifstream &fin, vector<string> &parts) {

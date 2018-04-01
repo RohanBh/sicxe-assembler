@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include "PassOne.h"
 #include "PassTwo.h"
-#include <iostream>
+#include "Commons.h"
 #include <fstream>
 
 const std::string RELATIVE_PATH = "../assembler_tests/basic_assembler_tests/";

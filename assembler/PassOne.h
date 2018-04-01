@@ -9,8 +9,4 @@
 
 std::string createIntermediate(std::string filename);
 
-int initOpTab(std::string projectRoot);
-
-int initSymTab(std::string projectRoot);
-
 #endif //SICXE_ASSEMBLER_PASSONE_H
