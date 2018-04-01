@@ -21,11 +21,11 @@ template<typename T>
 int getNextInstrAdd(T it_op, int locctr, string opcode);
 
 bool checkPCRel(int operandVal) {
-    return operandVal >= -2048 && operandVal < 2047;
+    return operandVal >= -2048 && operandVal < 2048;
 }
 
 bool checkBaseRel(int operandVal) {
-    return operandVal > 0 && operandVal < 4095;
+    return operandVal >= 0 && operandVal < 4096;
 }
 
 template<typename T, typename U>
@@ -45,10 +45,13 @@ int calcBaseRelOperand(string baseHex, T it_sym) {
 void writeTextRecord(ostream &fout, string &textRecord, string &objectCode) {
     int totalBytes = static_cast<int>(objectCode.size() / 2);
     if (totalBytes == 0) {
+        textRecord = "T";
+        objectCode = "";
         return;
     }
     textRecord += intToHexStr(totalBytes, 2);
     textRecord += objectCode;
+    toUpper(textRecord);
     fout << textRecord << "\n";
     textRecord = "T";
     objectCode = "";
@@ -71,6 +74,8 @@ string createObjectFile(std::string filename) {
     string baseLocHex;
     string textRecord = "T";
     string objectCode = "";
+    string modificationRecord = "";
+    bool shouldAddMRecord = startAddr == 0;
     bool canUseBase = false;
     while (readLine(fin, line)) {
         if (line.empty() || line.size() == 1) {
@@ -115,6 +120,9 @@ string createObjectFile(std::string filename) {
             canUseBase = false;
         } else if (opcode == "END") {
             writeTextRecord(fout, textRecord, objectCode);
+            if (shouldAddMRecord) {
+                fout << modificationRecord;
+            }
             string firstExIntrHex = intToHexStr(startAddr);
             if (!operand.empty()) {
                 auto it = SYMTAB.find(operand);
@@ -123,12 +131,12 @@ string createObjectFile(std::string filename) {
             fout << "E" << firstExIntrHex;
             break;
         } else {
-            if (textRecord == "T") {
-                textRecord += locctr;
-            }
             auto it_op = OPTAB.safeFind(opcode);
             string instructionHex = "";
             if (it_op != OPTAB.end()) {
+                if (textRecord == "T") {
+                    textRecord += locctr;
+                }
                 pss instrInfo = it_op->second;
                 switch (parse(operand)) {
                     case 0: {
@@ -153,6 +161,10 @@ string createObjectFile(std::string filename) {
                                 int baseRelOp = canUseBase ? calcBaseRelOperand(baseLocHex, it_sym) : -1;
                                 if (opcode[0] == '+') {
                                     instructionHex = assInstr_34(instrInfo.second, 1, 1, hexStrToInt(it_sym->second));
+                                    if (shouldAddMRecord) {
+                                        int addrFieldStartLoc = hexStrToInt(locctr) + 1;
+                                        modificationRecord += ("M" + intToHexStr(addrFieldStartLoc) + "05\n");
+                                    }
                                 } else if (checkPCRel(pcRelOp)) {
                                     instructionHex = assInstr_34(instrInfo.second, 1, 2, pcRelOp);
                                 } else if (canUseBase && checkBaseRel(baseRelOp)) {
@@ -169,7 +181,7 @@ string createObjectFile(std::string filename) {
                                 operand_dec = static_cast<unsigned int>(stoi(_operand));
                             }
                             catch (const invalid_argument &ia) {
-                                cerr << "Unspecified immediate operand" << _operand << "\n";
+                                cerr << "Unspecified immediate operand: " << _operand << "\n";
                                 break;
                             }
                             if (opcode[0] == '+') {
@@ -195,6 +207,10 @@ string createObjectFile(std::string filename) {
                                 int baseRelOp = canUseBase ? calcBaseRelOperand(baseLocHex, it_sym) : -1;
                                 if (opcode[0] == '+') {
                                     instructionHex = assInstr_34(instrInfo.second, 2, 1, hexStrToInt(it_sym->second));
+                                    if (shouldAddMRecord) {
+                                        int addrFieldStartLoc = hexStrToInt(locctr) + 1;
+                                        modificationRecord += ("M" + intToHexStr(addrFieldStartLoc) + "05\n");
+                                    }
                                 } else if (checkPCRel(pcRelOp)) {
                                     instructionHex = assInstr_34(instrInfo.second, 2, 2, pcRelOp);
                                 } else if (canUseBase && checkBaseRel(baseRelOp)) {
@@ -219,6 +235,10 @@ string createObjectFile(std::string filename) {
                                 int baseRelOp = canUseBase ? calcBaseRelOperand(baseLocHex, it_sym) : -1;
                                 if (opcode[0] == '+') {
                                     instructionHex = assInstr_34(instrInfo.second, 3, 9, hexStrToInt(it_sym->second));
+                                    if (shouldAddMRecord) {
+                                        int addrFieldStartLoc = hexStrToInt(locctr) + 1;
+                                        modificationRecord += ("M" + intToHexStr(addrFieldStartLoc) + "05\n");
+                                    }
                                 } else if (checkPCRel(pcRelOp)) {
                                     instructionHex = assInstr_34(instrInfo.second, 3, 10, pcRelOp);
                                 } else if (canUseBase && checkBaseRel(baseRelOp)) {
@@ -272,10 +292,16 @@ string createObjectFile(std::string filename) {
                                 int baseRelOp = canUseBase ? calcBaseRelOperand(baseLocHex, it_sym) : -1;
                                 if (opcode[0] == '+') {
                                     instructionHex = assInstr_34(instrInfo.second, 3, 1, hexStrToInt(it_sym->second));
+                                    if (shouldAddMRecord) {
+                                        int addrFieldStartLoc = hexStrToInt(locctr) + 1;
+                                        modificationRecord += ("M" + intToHexStr(addrFieldStartLoc) + "05\n");
+                                    }
                                 } else if (checkPCRel(pcRelOp)) {
                                     instructionHex = assInstr_34(instrInfo.second, 3, 2, pcRelOp);
                                 } else if (canUseBase && checkBaseRel(baseRelOp)) {
                                     instructionHex = assInstr_34(instrInfo.second, 3, 4, baseRelOp);
+                                } else {
+                                    cerr << "Can't use PC rel or Base rel addr to assemble this instr\n";
                                 }
                             }
                         } else {
@@ -285,6 +311,9 @@ string createObjectFile(std::string filename) {
                     }
                 }
             } else if (opcode == "BYTE" | opcode == "WORD") {
+                if (textRecord == "T") {
+                    textRecord += locctr;
+                }
                 if (tolower(operand[0]) == 'x') {
                     instructionHex = operand.substr(2, operand.size() - 3);
                 } else if (tolower(operand[0]) == 'c') {
@@ -300,10 +329,12 @@ string createObjectFile(std::string filename) {
                     }
                 }
             }
-            if (objectCode.size() + instructionHex.size() > 60 || opcode == "RESW" || opcode == "RESB") {
+            if (objectCode.size() + instructionHex.size() > 60) {
                 writeTextRecord(fout, textRecord, objectCode);
                 textRecord += locctr;
                 objectCode += instructionHex;
+            } else if (opcode == "RESW" || opcode == "RESB") {
+                writeTextRecord(fout, textRecord, objectCode);
             } else {
                 objectCode += instructionHex;
             }
@@ -366,10 +397,10 @@ string assInstr_34(string opcodeHex, int ni, int xbpe, int actualOperandVal) {
     int finalInstr = 0;
     int size;
     if ((xbpe & 1) == 0) {
-        finalInstr = (opcode_dec << 16) + (xbpe << 12) + actualOperandVal;
+        finalInstr = (opcode_dec << 16) + (xbpe << 12) + (actualOperandVal & 0xFFF);
         size = 6;
     } else {
-        finalInstr = (opcode_dec << 24) + (xbpe << 20) + actualOperandVal;
+        finalInstr = (opcode_dec << 24) + (xbpe << 20) + (actualOperandVal & 0xFFFFF);
         size = 8;
     }
     return intToHexStr(finalInstr, size);
