@@ -5,9 +5,7 @@
 #include "PassOne.h"
 #include "Utils.h"
 #include "Commons.h"
-#include <fstream>
 #include <iostream>
-#include <vector>
 #include <sstream>
 
 using namespace std;
@@ -20,17 +18,41 @@ void printLine(ostream &fout, int locctr, vector<string> &line) {
     fout << outLine << "\n";
 }
 
-std::string createIntermediate(std::string filename) {
-    initOpTab("/home/rohan/CLionProjects/sicxe_assembler/assembler/");
-    initSymTab("/home/rohan/CLionProjects/sicxe_assembler/assembler/");
+string getIntermediateFileName(string assemblyFile) {
+    size_t pos = assemblyFile.find(".asmb");
+    string intermediateFile;
+    if (pos != string::npos) {
+        intermediateFile = assemblyFile.substr(0, pos);
+    } else {
+        intermediateFile = assemblyFile;
+    }
+    size_t _pos = intermediateFile.find_last_of('/');
+    if (_pos != string::npos) {
+        intermediateFile = intermediateFile.substr(_pos + 1);
+    }
+    return intermediateFile + ".imd";
+}
+
+std::string createIntermediate(std::string assemblyFile) {
+    initOpTab("../");
+    initSymTab("../");
 
     vector<string> line;
-    ifstream fin(filename.c_str());
-    string outFile = filename + "_intermediate.txt";
-    ofstream fout(outFile.c_str());
+    ifstream fin(assemblyFile.c_str());
+    string intermediateFile = getIntermediateFileName(assemblyFile);
+    ofstream fout(intermediateFile.c_str());
     string opcode, operand, label;
     startAddr = 0;
     int locctr = 0;
+
+    if (!fin.is_open()) {
+        cerr << "Couldn't open assembly file\n" << "Filename: " << assemblyFile << "\n";
+        return "";
+    }
+    if (!fout.is_open()) {
+        cerr << "Could not create intermediate file\n" << "Filename: " << intermediateFile << "\n";
+        return "";
+    }
 
     while (fin.is_open() && readLine(fin, line)) {
         int oldlocctr = locctr;
@@ -52,7 +74,7 @@ std::string createIntermediate(std::string filename) {
                 opcode = line[1];
                 if (OPTAB.safeFind(opcode) == OPTAB.end()) {
                     cerr << "Undefined Line\n";
-                    printLine(cout, oldlocctr, line);
+                    printLine(cerr, oldlocctr, line);
                 }
             }
         } else if (line.size() == 1) {
@@ -64,7 +86,7 @@ std::string createIntermediate(std::string filename) {
             printLine(fout, oldlocctr, line);
             programName = label;
             if (programName.empty()) {
-                programName = filename;
+                programName = assemblyFile;
             }
             continue;
         } else if (opcode == "END") {
@@ -77,7 +99,7 @@ std::string createIntermediate(std::string filename) {
             if (!label.empty()) {
                 if (SYMTAB.find(label) != SYMTAB.end()) {
                     cerr << "Duplicate Symbol!\n";
-                    printLine(cout, oldlocctr, line);
+                    printLine(cerr, oldlocctr, line);
                 } else {
                     SYMTAB.insert(pss(label, intToHexStr(locctr)));
                 }
@@ -111,14 +133,14 @@ std::string createIntermediate(std::string filename) {
                 }
             } else {
                 cerr << "Invalid opcode!\n";
-                printLine(cout, oldlocctr, line);
+                printLine(cerr, oldlocctr, line);
             }
             printLine(fout, oldlocctr, line);
             continue;
         }
     }
     programLength = locctr - startAddr;
-    string retVal = fout.is_open() ? outFile : "Not created";
+    string retVal = fout.is_open() ? intermediateFile : "Not created";
     fout.close();
     fin.close();
     return retVal;

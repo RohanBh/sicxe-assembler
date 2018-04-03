@@ -7,6 +7,6 @@
 
 #include <string>
 
-std::string createIntermediate(std::string filename);
+std::string createIntermediate(std::string assemblyFile);
 
 #endif //SICXE_ASSEMBLER_PASSONE_H

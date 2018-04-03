@@ -7,6 +7,7 @@
 #include "Commons.h"
 #include "Utils.h"
 #include <sstream>
+#include <iostream>
 
 using namespace std;
 
@@ -25,7 +26,7 @@ int initOpTab(string projectRoot) {
     if (!OPTAB.empty()) {
         return static_cast<int>(OPTAB.size());
     }
-    std::ifstream fin(projectRoot + "opcodes.txt");
+    std::ifstream fin(projectRoot + "assembler/opcodes.txt");
     if (fin.is_open()) {
         string line;
         while (getline(fin, line)) {
@@ -36,6 +37,7 @@ int initOpTab(string projectRoot) {
         fin.close();
         return (int) OPTAB.size();
     }
+    std::cerr<< "Missing file: opcodes.txt\n";
     return -1;
 }
 
@@ -43,7 +45,7 @@ int initSymTab(string projectRoot) {
     if (!SYMTAB.empty()) {
         return static_cast<int>(SYMTAB.size());
     }
-    std::ifstream fin(projectRoot + "symbols.txt");
+    std::ifstream fin(projectRoot + "assembler/symbols.txt");
     if (fin.is_open()) {
         string line;
         while (getline(fin, line)) {
@@ -54,6 +56,7 @@ int initSymTab(string projectRoot) {
         fin.close();
         return (int) SYMTAB.size();
     }
+    std::cerr<< "Missing file: symbols.txt\n";
     return -1;
 }
 

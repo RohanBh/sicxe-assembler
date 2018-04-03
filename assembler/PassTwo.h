@@ -8,6 +8,6 @@
 #include <string>
 
 
-std::string createObjectFile(std::string filename);
+std::string createObjectFile(std::string intermediateFile);
 
 #endif //SICXE_ASSEMBLER_PASSTWO_H

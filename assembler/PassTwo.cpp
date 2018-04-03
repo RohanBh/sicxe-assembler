@@ -57,17 +57,17 @@ void writeTextRecord(ostream &fout, string &textRecord, string &objectCode) {
     objectCode = "";
 }
 
-string createObjectFile(std::string filename) {
-    ifstream fin(filename.c_str());
+string createObjectFile(std::string intermediateFile) {
+    ifstream fin(intermediateFile.c_str());
     if (!fin.is_open()) {
-        cerr << "Intermediate File doesn't exits\n" << "Filename: " << filename << "\n";
+        cerr << "Intermediate File doesn't exits\n" << "Filename: " << intermediateFile << "\n";
         return "";
     }
     vector<string> line;
-    string outFile = filename.substr(0, filename.find("_intermediate.txt")) + ".object";
-    ofstream fout(outFile.c_str());
+    string objectFile = intermediateFile.substr(0, intermediateFile.find(".imd")) + ".ob";
+    ofstream fout(objectFile.c_str());
     if (!fout.is_open()) {
-        cerr << "Can not open out file\n" << "Filename: " << outFile << "\n";
+        cerr << "Could not create object file\n" << "Filename: " << objectFile << "\n";
         return "";
     }
     string opcode, operand, label, locctr;
@@ -111,7 +111,11 @@ string createObjectFile(std::string filename) {
             } else if (headername.size() > 6) {
                 headername = headername.substr(0, 6);
             }
-            fout << "H" << headername << intToHexStr(startAddr) << intToHexStr(programLength) << "\n";
+            string startAddrHex = intToHexStr(startAddr);
+            string programLengthHex = intToHexStr(programLength);
+            toUpper(startAddrHex);
+            toUpper(programLengthHex);
+            fout << "H" << headername << startAddrHex << programLengthHex << "\n";
         } else if (opcode == "BASE") {
             auto it_sym = SYMTAB.find(operand);
             baseLocHex = it_sym->second;
@@ -128,6 +132,7 @@ string createObjectFile(std::string filename) {
                 auto it = SYMTAB.find(operand);
                 firstExIntrHex = it->second;
             }
+            toUpper(firstExIntrHex);
             fout << "E" << firstExIntrHex;
             break;
         } else {
@@ -340,7 +345,7 @@ string createObjectFile(std::string filename) {
             }
         }
     }
-    string retVal = fout.is_open() ? outFile : "Not created";
+    string retVal = fout.is_open() ? objectFile : "Not created";
     fin.close();
     fout.close();
     return retVal;
