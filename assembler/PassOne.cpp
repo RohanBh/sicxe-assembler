@@ -36,11 +36,11 @@ string getIntermediateFileName(string assemblyFile) {
 std::string createIntermediate(std::string assemblyFile) {
     initOpTab("../");
     initSymTab("../");
-
-    vector<string> line;
+    
     ifstream fin(assemblyFile.c_str());
     string intermediateFile = getIntermediateFileName(assemblyFile);
     ofstream fout(intermediateFile.c_str());
+    vector<string> line;
     string opcode, operand, label;
     startAddr = 0;
     int locctr = 0;
