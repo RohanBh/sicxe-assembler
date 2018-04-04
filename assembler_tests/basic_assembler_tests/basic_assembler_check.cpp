@@ -13,7 +13,7 @@ const std::string TEST_ROOT = PROJECT_ROOT + "/assembler_tests/basic_assembler_t
 bool compareFiles(const std::string &p1, const std::string &p2);
 
 TEST(basic_check, test_optab) {
-    EXPECT_EQ(initOpTab(PROJECT_ROOT), 63);
+    EXPECT_EQ(initOpTab(PROJECT_ROOT), 64);
     EXPECT_EQ(initSymTab(PROJECT_ROOT), 9);
 }
 
@@ -34,9 +34,28 @@ TEST(basic_check, test_ll_beck_example) {
     initOpTab(PROJECT_ROOT);
     initSymTab(PROJECT_ROOT);
 
-    std::string intermediate = createIntermediate(TEST_ROOT + "ll_beck_example.asmb");
+    std::string intermediate = createIntermediate(TEST_ROOT + "ll_beck_basic_example.asmb");
     std::string objectFile = createObjectFile(intermediate);
-    EXPECT_TRUE(compareFiles(objectFile, TEST_ROOT + "ll_beck_example.txt"));
+    EXPECT_TRUE(compareFiles(objectFile, TEST_ROOT + "ll_beck_basic_example.txt"));
+}
+
+TEST(advanced_check, test_program_block_example) {
+    OPTAB.clear();
+    SYMTAB.clear();
+    initOpTab(PROJECT_ROOT);
+    initSymTab(PROJECT_ROOT);
+
+    std::string intermediate = createIntermediate(TEST_ROOT + "program_block_example.asmb");
+    EXPECT_EQ(BLOCKTAB.size(), 3);
+    EXPECT_EQ(BLOCKTAB.find("CDATA")->second.blockLength, "00000b");
+    EXPECT_EQ(BLOCKTAB.find("CBLKS")->second.blockLength, "001000");
+    EXPECT_EQ(BLOCKTAB.find("DEFAULT")->second.blockLength, "000066");
+    EXPECT_EQ(BLOCKTAB.find("CDATA")->second.index, 1);
+    EXPECT_EQ(BLOCKTAB.find("CBLKS")->second.index, 2);
+    EXPECT_EQ(BLOCKTAB.find("DEFAULT")->second.index, 0);
+    EXPECT_EQ(BLOCKTAB.find("CDATA")->second.blockAddr, "000066");
+    EXPECT_EQ(BLOCKTAB.find("CBLKS")->second.blockAddr, "000071");
+    EXPECT_EQ(BLOCKTAB.find("DEFAULT")->second.blockAddr, "000000");
 }
 
 bool compareFiles(const std::string &p1, const std::string &p2) {

@@ -36,7 +36,7 @@ string getIntermediateFileName(string assemblyFile) {
 std::string createIntermediate(std::string assemblyFile) {
     initOpTab("../");
     initSymTab("../");
-    
+
     ifstream fin(assemblyFile.c_str());
     string intermediateFile = getIntermediateFileName(assemblyFile);
     ofstream fout(intermediateFile.c_str());
@@ -44,6 +44,9 @@ std::string createIntermediate(std::string assemblyFile) {
     string opcode, operand, label;
     startAddr = 0;
     int locctr = 0;
+    string currBlock = "DEFAULT";
+    int blockIndex = 0;
+    insertBlock(currBlock, Block(blockIndex, intToHexStr(startAddr), intToHexStr(locctr)));
 
     if (!fin.is_open()) {
         cerr << "Couldn't open assembly file\n" << "Filename: " << assemblyFile << "\n";
@@ -54,8 +57,8 @@ std::string createIntermediate(std::string assemblyFile) {
         return "";
     }
 
-    while (fin.is_open() && readLine(fin, line)) {
-        int oldlocctr = locctr;
+    while (readLine(fin, line)) {
+        int currLinelocctr = locctr;
         opcode = "";
         operand = "";
         label = "";
@@ -74,7 +77,7 @@ std::string createIntermediate(std::string assemblyFile) {
                 opcode = line[1];
                 if (OPTAB.safeFind(opcode) == OPTAB.end()) {
                     cerr << "Undefined Line\n";
-                    printLine(cerr, oldlocctr, line);
+                    printLine(cerr, currLinelocctr, line);
                 }
             }
         } else if (line.size() == 1) {
@@ -83,23 +86,47 @@ std::string createIntermediate(std::string assemblyFile) {
         if (opcode == "START") {
             startAddr = hexStrToInt(operand);
             locctr = startAddr;
-            printLine(fout, oldlocctr, line);
+            printLine(fout, currLinelocctr, line);
             programName = label;
             if (programName.empty()) {
                 programName = assemblyFile;
             }
+            insertBlock(currBlock, Block(blockIndex, intToHexStr(startAddr), intToHexStr(locctr)));
             continue;
         } else if (opcode == "END") {
-            printLine(fout, oldlocctr, line);
+            printLine(fout, currLinelocctr, line);
+            // update current block length
+            auto it_curr = BLOCKTAB.find(currBlock);
+            it_curr->second.blockLength = intToHexStr(locctr);
             break;
         } else if (opcode == "BASE" || opcode == "NOBASE") {
-            printLine(fout, oldlocctr, line);
+            printLine(fout, currLinelocctr, line);
+            continue;
+        } else if (opcode == "USE") {
+            printLine(fout, currLinelocctr, line);
+            string nextBlock = "DEFAULT";
+            if (!operand.empty()) {
+                nextBlock = operand;
+            }
+            // check if block already exists
+            auto it_next = BLOCKTAB.find(nextBlock);
+            if (it_next == BLOCKTAB.end()) {
+                blockIndex++;
+                insertBlock(nextBlock, Block(blockIndex, intToHexStr(0), intToHexStr(0)));
+                it_next = BLOCKTAB.find(nextBlock);
+            }
+            // update current block length
+            auto it_curr = BLOCKTAB.find(currBlock);
+            it_curr->second.blockLength = intToHexStr(currLinelocctr);
+            // update locctr
+            locctr = hexStrToInt(it_next->second.blockLength);
+            currBlock = nextBlock;
             continue;
         } else {
             if (!label.empty()) {
                 if (SYMTAB.find(label) != SYMTAB.end()) {
                     cerr << "Duplicate Symbol!\n";
-                    printLine(cerr, oldlocctr, line);
+                    printLine(cerr, currLinelocctr, line);
                 } else {
                     SYMTAB.insert(pss(label, intToHexStr(locctr)));
                 }
@@ -133,9 +160,9 @@ std::string createIntermediate(std::string assemblyFile) {
                 }
             } else {
                 cerr << "Invalid opcode!\n";
-                printLine(cerr, oldlocctr, line);
+                printLine(cerr, currLinelocctr, line);
             }
-            printLine(fout, oldlocctr, line);
+            printLine(fout, currLinelocctr, line);
             continue;
         }
     }
@@ -143,6 +170,7 @@ std::string createIntermediate(std::string assemblyFile) {
     string retVal = fout.is_open() ? intermediateFile : "Not created";
     fout.close();
     fin.close();
+    updateBlockAddr();
     return retVal;
 }
 
