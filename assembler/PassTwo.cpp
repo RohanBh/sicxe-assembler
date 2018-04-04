@@ -12,6 +12,10 @@
 
 using namespace std;
 
+ofstream log("log.txt", ios::ate | ios::app);
+int lineNum = 0;
+bool errorFlag = false;
+
 /* ========== Methods to determine which relative addressing mode is to be used ========== */
 bool checkPCRel(int operandVal);
 
@@ -75,6 +79,15 @@ printListLine(ostream &lout, int lineNum, int locctr, string label, string opcod
     lout << setw(10) << left << objectcode << "\n";
 }
 
+void printLogLine(vector<string> &line) {
+    errorFlag = true;
+    std::string outLine = "";
+    for (auto const &s : line) {
+        outLine += s + " ";
+    }
+    log << outLine << "\n";
+}
+
 string createObjectFile(std::string intermediateFile) {
     ifstream fin(intermediateFile.c_str());
     if (!fin.is_open()) {
@@ -86,6 +99,9 @@ string createObjectFile(std::string intermediateFile) {
 
     ofstream fout(objectFile.c_str());
     ofstream lout(listingFile.c_str());
+    if (!log.is_open()) {
+        log.open("log.txt", ios::ate | ios::app);
+    }
 
     prepareListingFile(lout);
 
@@ -95,13 +111,14 @@ string createObjectFile(std::string intermediateFile) {
     }
     vector<string> line;
     string opcode, operand, label, locctr;
-    int lineNum = 5;
+    lineNum = 5;
     string baseLocHex;
     string textRecord = "T";
     string objectCode = "";
     string modificationRecord = "";
     bool shouldAddMRecord = startAddr == 0;
     bool canUseBase = false;
+    errorFlag = false;
     string currBlock = "DEFAULT";
     while (readLine(fin, line)) {
         // Skip the line if it's empty or contains on the location counter's value
@@ -149,12 +166,13 @@ string createObjectFile(std::string intermediateFile) {
                         if (instrInfo.first == "1") {
                             instructionHex = instrInfo.second;
                         } else if (instrInfo.first == "2") {
-                            cerr << "No operand specified for " << opcode << " instruction\n";
+                            log << "Line: " << lineNum << ", No operand specified for " << opcode << " instruction\n";
                         } else if (safe(opcode) == "RSUB") {
                             int xbpe = opcode[0] == '+' ? 1 : 0;
                             instructionHex = assInstr_34(instrInfo.second, 3, xbpe, 0);
                         } else {
-                            cerr << "No operand specified for ";
+                            log << "Line: " << lineNum << ", No operand specified for " << opcode << " instruction\n";
+                            printLogLine(line);
                         }
                         break;
                     }
@@ -169,7 +187,9 @@ string createObjectFile(std::string intermediateFile) {
                                 sym_it = it_sym;
                                 ni = 1;
                             } else {
-                                cerr << "Can't use Immediate addr with format " << instrInfo.first << "\n";
+                                log << "Line: " << lineNum << "Can't use Immediate addr with format " << instrInfo.first
+                                    << "\n";
+                                printLogLine(line);
                             }
                         } else {
                             instructionHex = handleImmediateIntegerOperand(instrInfo.second, operand, opcode[0]);
@@ -187,10 +207,13 @@ string createObjectFile(std::string intermediateFile) {
                                 sym_it = it_sym;
                                 ni = 2;
                             } else {
-                                cerr << "Can't use indirect addr with format " << instrInfo.first << "\n";
+                                log << "Line: " << lineNum << ", Can't use indirect addr with format "
+                                    << instrInfo.first << "\n";
+                                printLogLine(line);
                             }
                         } else {
-                            cerr << "Symbol: " << it_sym->first << " not found in symtab";
+                            log << "Line: " << lineNum << ", Symbol: " << it_sym->first << " not found in symtab";
+                            printLogLine(line);
                         }
                         break;
                     }
@@ -207,11 +230,14 @@ string createObjectFile(std::string intermediateFile) {
                                 x = 8;
                                 break;
                             } else if (instrInfo.first != "2") {
-                                cerr << "Can't use indexed addr with format " << instrInfo.first << "\n";
+                                log << "Line: " << lineNum << ", Can't use indexed addr with format " << instrInfo.first
+                                    << "\n";
+                                printLogLine(line);
                                 break;
                             }
                         } else {
-                            cerr << "Symbol: " << it_sym->first << " not found in symtab";
+                            log << "Line: " << lineNum << ", Symbol: " << it_sym->first << " not found in symtab";
+                            printLogLine(line);
                             break;
                         }
                         // Break not added to allow the passing of format 2 instructions into the next case.
@@ -219,7 +245,8 @@ string createObjectFile(std::string intermediateFile) {
                         // Two register instructions
                     case 4: {
                         if (instrInfo.first != "2") {
-                            cerr << "Unknown symbol: " << operand;
+                            log << "Line: " << lineNum << ", Unknown symbol: " << operand;
+                            printLogLine(line);
                         } else {
                             string r1, r2;
                             unsigned long pos = operand.find(',');
@@ -246,7 +273,8 @@ string createObjectFile(std::string intermediateFile) {
                                 ni = 3;
                             }
                         } else {
-                            cerr << "Symbol: " << it_sym->first << " not found in symtab";
+                            log << "Line: " << lineNum << ", Symbol: " << it_sym->first << " not found in symtab";
+                            printLogLine(line);
                         }
                         break;
                     }
@@ -266,7 +294,8 @@ string createObjectFile(std::string intermediateFile) {
                     } else if (canUseBase && checkBaseRel(baseRelOp)) {
                         instructionHex = assInstr_34(instrInfo.second, ni, x + 4, baseRelOp);
                     } else {
-                        cerr << "Can't use PC rel or Base rel addr to assemble this instr\n";
+                        log << "Line: " << lineNum << ", Can't use PC rel or Base rel addr to assemble this instr\n";
+                        printLogLine(line);
                     }
                 }
             } else if (opcode == "BYTE" | opcode == "WORD") {
@@ -284,7 +313,8 @@ string createObjectFile(std::string intermediateFile) {
                         instructionHex = intToHexStr(dec_val);
                     }
                     catch (const invalid_argument &ia) {
-                        cerr << "wrong WORD value " << operand << "\n";
+                        log << "Line: " << lineNum << ", wrong WORD value " << operand << "\n";
+                        printLogLine(line);
                     }
                 }
             }
@@ -304,6 +334,12 @@ string createObjectFile(std::string intermediateFile) {
     string retVal = fout.is_open() ? objectFile : "Not created";
     fin.close();
     fout.close();
+    log.close();
+    if (errorFlag) {
+        cerr << "Assembly not successful, check log.txt for more info\n";
+    } else {
+        cout << "Object program File successfully generated!\n";
+    }
     return retVal;
 }
 
@@ -353,9 +389,6 @@ void initVariables(vector<string> &line, string &label, string &opcode, string &
         if (OPTAB.safeFind(opcode) == OPTAB.end()) {
             label = line[1];
             opcode = line[2];
-            if (OPTAB.safeFind(operand) == OPTAB.end()) {
-                cerr << "Unknown Line\n";
-            }
         }
     } else if (line.size() == 2) {
         opcode = line[1];
@@ -369,30 +402,35 @@ string handleImmediateIntegerOperand(string opcodeHex, const string &operand, ch
         operand_dec = static_cast<unsigned int>(stoi(_operand));
     }
     catch (const invalid_argument &ia) {
-        cerr << "Unspecified immediate operand: " << _operand << "\n";
+        log << "Line: " << lineNum << ", Unspecified immediate operand: " << _operand << "\n";
+        errorFlag = true;
         return "";
     }
     if (opcode_first_char == '+') {
         if (operand_dec > 1048575) {
-            cerr << "operand too large to fit in format 4: " << operand;
+            log << "Line: " << lineNum << ", operand too large to fit in format 4: " << operand;
+            errorFlag = true;
         } else {
             return assInstr_34(opcodeHex, 1, 1, operand_dec);
         }
     } else if (operand_dec < 4096) {
         return assInstr_34(opcodeHex, 1, 0, operand_dec);
     } else {
-        cerr << "operand too large to fit in format 3: " << operand;
+        log << "Line: " << lineNum << ", operand too large to fit in format 3: " << operand;
+        errorFlag = true;
     }
 }
 
 template<typename T>
 bool isRegisterValid(T it1, const string &operand) {
     if (it1 == SYMTAB.end()) {
-        cerr << "Invalid register symbol: " << operand << "\n";
+        log << "Line: " << lineNum << ", Invalid register symbol: " << operand << "\n";
+        errorFlag = true;
         return false;
     }
     if (stoi(it1->second.first) < 0 || stoi(it1->second.first) > 9 || stoi(it1->second.first) == 7) {
-        cerr << "Expected a register, found: " << it1->first << "\n";
+        log << "Line: " << lineNum << ", Expected a register, found: " << it1->first << "\n";
+        errorFlag = true;
         return false;
     }
     return true;
@@ -406,7 +444,8 @@ string assInstr_2(string opcodeHex, string r1, string r2) {
         b = stoi(r2);
     }
     catch (const invalid_argument &ia) {
-        cerr << "Not correct register types: " << r1 << " " << r2 << "\n";
+        log << "Line: " << lineNum << ", Not correct register types: " << r1 << " " << r2 << "\n";
+        errorFlag = true;
     }
     return intToHexStr((opcode_dec << 8) + a + b, 4);
 }

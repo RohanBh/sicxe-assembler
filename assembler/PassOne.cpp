@@ -40,13 +40,17 @@ std::string createIntermediate(std::string assemblyFile) {
     string intermediateFile = getIntermediateFileName(assemblyFile);
     ifstream fin(assemblyFile.c_str());
     ofstream fout(intermediateFile.c_str());
+    ofstream log("log.txt");
+    log << "Error at:\n";
 
     vector<string> line;
     string opcode, operand, label;
     startAddr = 0;
     int locctr = 0;
+    int lineNum = 5;
     string currBlock = "DEFAULT";
     int blockIndex = 0;
+    bool errorFlag = false;
     insertBlock(currBlock, Block(blockIndex, intToHexStr(startAddr), intToHexStr(locctr)));
 
     if (!fin.is_open()) {
@@ -77,8 +81,10 @@ std::string createIntermediate(std::string assemblyFile) {
                 label = line[0];
                 opcode = line[1];
                 if (OPTAB.safeFind(opcode) == OPTAB.end()) {
-                    cerr << "Undefined Line\n";
-                    printLine(cerr, currLinelocctr, line);
+                    log << "Line " << lineNum << ", Unknown Line: ";
+                    printLine(log, currLinelocctr, line);
+                    errorFlag = true;
+                    cout << "\n";
                 }
             }
         } else if (line.size() == 1) {
@@ -93,7 +99,6 @@ std::string createIntermediate(std::string assemblyFile) {
                 programName = assemblyFile;
             }
             insertBlock(currBlock, Block(blockIndex, intToHexStr(startAddr), intToHexStr(locctr)));
-            continue;
         } else if (opcode == "END") {
             printLine(fout, currLinelocctr, line);
             // update current block length
@@ -102,7 +107,6 @@ std::string createIntermediate(std::string assemblyFile) {
             break;
         } else if (opcode == "BASE" || opcode == "NOBASE") {
             printLine(fout, currLinelocctr, line);
-            continue;
         } else if (opcode == "USE") {
             printLine(fout, currLinelocctr, line);
             string nextBlock = "DEFAULT";
@@ -122,14 +126,15 @@ std::string createIntermediate(std::string assemblyFile) {
             // update locctr
             locctr = hexStrToInt(it_next->second.blockLength);
             currBlock = nextBlock;
-            continue;
         } else {
             if (!label.empty()) {
                 if (SYMTAB.find(label) != SYMTAB.end()) {
-                    cerr << "Duplicate Symbol!\n";
-                    printLine(cerr, currLinelocctr, line);
+                    log << "Line " << lineNum << ", Duplicate Symbol!\n";
+                    printLine(log, currLinelocctr, line);
+                    cout << "\n";
+                    errorFlag = true;
                 } else {
-                    SYMTAB.insert(pair<string, pss>(label, pss(intToHexStr(locctr), currBlock)));
+                    SYMTAB.insert(pair<string, pss >(label, pss(intToHexStr(locctr), currBlock)));
                 }
             }
             auto it = OPTAB.safeFind(opcode);
@@ -160,18 +165,27 @@ std::string createIntermediate(std::string assemblyFile) {
                     locctr += substr.size();
                 }
             } else {
-                cerr << "Invalid opcode!\n";
-                printLine(cerr, currLinelocctr, line);
+                log << "Line " << lineNum << ", Invalid opcode!\n";
+                printLine(log, currLinelocctr, line);
+                cout << "\n";
+                errorFlag = true;
             }
             printLine(fout, currLinelocctr, line);
-            continue;
         }
+        lineNum += 5;
     }
     string retVal = fout.is_open() ? intermediateFile : "Not created";
     fout.close();
     fin.close();
+    log.close();
     Block lastBlock = updateBlockAddr();
     programLength = hexStrToInt(lastBlock.blockAddr) + hexStrToInt(lastBlock.blockLength);
+    if (errorFlag) {
+        cerr << "Assembly not successful, check log.txt for more info\n";
+    }
+    else{
+        cout << "Intermediate File successfully generated\n";
+    }
     return retVal;
 }
 
