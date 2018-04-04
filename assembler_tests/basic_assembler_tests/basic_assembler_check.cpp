@@ -56,6 +56,9 @@ TEST(advanced_check, test_program_block_example) {
     EXPECT_EQ(BLOCKTAB.find("CDATA")->second.blockAddr, "000066");
     EXPECT_EQ(BLOCKTAB.find("CBLKS")->second.blockAddr, "000071");
     EXPECT_EQ(BLOCKTAB.find("DEFAULT")->second.blockAddr, "000000");
+
+    std::string objectFile = createObjectFile(intermediate);
+    EXPECT_TRUE(compareFiles(objectFile, TEST_ROOT + "program_block_example.txt"));
 }
 
 bool compareFiles(const std::string &p1, const std::string &p2) {
