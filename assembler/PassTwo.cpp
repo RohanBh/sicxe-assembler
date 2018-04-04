@@ -7,6 +7,7 @@
 #include "Utils.h"
 #include <sstream>
 #include <iostream>
+#include <iomanip>
 
 
 using namespace std;
@@ -55,6 +56,25 @@ void writeEndRecord(ofstream &fout, const string &operand);
 
 /* ===================================================================== */
 
+
+void prepareListingFile(ofstream &lout) {
+    lout << "LINE" << "  ";
+    lout << setw(4) << left << "Loc" << "  ";
+    lout << setw(28) << left << "      Source Statement      ";
+    lout << "Object Code\n";
+
+}
+
+void
+printListLine(ostream &lout, int lineNum, int locctr, string label, string opcode, string operand, string objectcode) {
+    lout << setw(4) << left << lineNum << "  ";
+    lout << setw(4) << right << intToHexStr(locctr, 4) << "  ";
+    lout << setw(8) << left << label << "  ";
+    lout << setw(6) << left << opcode << "  ";
+    lout << setw(10) << left << operand << "  ";
+    lout << setw(10) << left << objectcode << "\n";
+}
+
 string createObjectFile(std::string intermediateFile) {
     ifstream fin(intermediateFile.c_str());
     if (!fin.is_open()) {
@@ -62,13 +82,20 @@ string createObjectFile(std::string intermediateFile) {
         return "";
     }
     string objectFile = intermediateFile.substr(0, intermediateFile.find(".imd")) + ".ob";
+    string listingFile = intermediateFile.substr(0, intermediateFile.find(".imd")) + ".txt";
+
     ofstream fout(objectFile.c_str());
+    ofstream lout(listingFile.c_str());
+
+    prepareListingFile(lout);
+
     if (!fout.is_open()) {
         cerr << "Could not create object file\n" << "Filename: " << objectFile << "\n";
         return "";
     }
     vector<string> line;
     string opcode, operand, label, locctr;
+    int lineNum = 5;
     string baseLocHex;
     string textRecord = "T";
     string objectCode = "";
@@ -83,6 +110,7 @@ string createObjectFile(std::string intermediateFile) {
         }
         locctr = intToHexStr(hexStrToInt(BLOCKTAB.find(currBlock)->second.blockAddr) + hexStrToInt(line[0]));
         initVariables(line, label, opcode, operand);
+        string instructionHex = "";
         if (opcode == "START") {
             writeHeaderRecord(fout);
         } else if (opcode == "BASE") {
@@ -107,7 +135,6 @@ string createObjectFile(std::string intermediateFile) {
             }
         } else {
             auto it_op = OPTAB.safeFind(opcode);
-            string instructionHex = "";
             if (it_op != OPTAB.end()) {
                 if (textRecord == "T") {
                     textRecord += locctr;
@@ -271,6 +298,8 @@ string createObjectFile(std::string intermediateFile) {
                 objectCode += instructionHex;
             }
         }
+        printListLine(lout, lineNum, hexStrToInt(locctr), label, opcode, operand, instructionHex);
+        lineNum += 5;
     }
     string retVal = fout.is_open() ? objectFile : "Not created";
     fin.close();
