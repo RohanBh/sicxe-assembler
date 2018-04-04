@@ -11,7 +11,7 @@
 
 using namespace std;
 
-int hexStrToInt(string &s) {
+int hexStrToInt(string s) {
     toLower(s);
     return stoi(s, nullptr, 16);
 

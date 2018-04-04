@@ -11,7 +11,7 @@ void toUpper(std::string &str);
 
 void toLower(std::string &str);
 
-int hexStrToInt(std::string &s);
+int hexStrToInt(std::string s);
 
 std::string intToHexStr(int i, int size = 6);
 

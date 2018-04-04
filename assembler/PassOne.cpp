@@ -18,7 +18,7 @@ void printLine(ostream &fout, int locctr, vector<string> &line) {
     fout << outLine << "\n";
 }
 
-string getIntermediateFileName(string assemblyFile) {
+string getIntermediateFileName(const string &assemblyFile) {
     size_t pos = assemblyFile.find(".asmb");
     string intermediateFile;
     if (pos != string::npos) {
@@ -37,9 +37,10 @@ std::string createIntermediate(std::string assemblyFile) {
     initOpTab("../");
     initSymTab("../");
 
-    ifstream fin(assemblyFile.c_str());
     string intermediateFile = getIntermediateFileName(assemblyFile);
+    ifstream fin(assemblyFile.c_str());
     ofstream fout(intermediateFile.c_str());
+
     vector<string> line;
     string opcode, operand, label;
     startAddr = 0;
@@ -128,7 +129,7 @@ std::string createIntermediate(std::string assemblyFile) {
                     cerr << "Duplicate Symbol!\n";
                     printLine(cerr, currLinelocctr, line);
                 } else {
-                    SYMTAB.insert(pss(label, intToHexStr(locctr)));
+                    SYMTAB.insert(pair<string, pss>(label, pss(intToHexStr(locctr), currBlock)));
                 }
             }
             auto it = OPTAB.safeFind(opcode);
@@ -166,11 +167,11 @@ std::string createIntermediate(std::string assemblyFile) {
             continue;
         }
     }
-    programLength = locctr - startAddr;
     string retVal = fout.is_open() ? intermediateFile : "Not created";
     fout.close();
     fin.close();
-    updateBlockAddr();
+    Block lastBlock = updateBlockAddr();
+    programLength = hexStrToInt(lastBlock.blockAddr) + hexStrToInt(lastBlock.blockLength);
     return retVal;
 }
 

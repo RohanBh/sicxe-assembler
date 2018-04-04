@@ -18,7 +18,7 @@ string *split(string line);
 basic_istream<char, char_traits<char>> &readLine(ifstream &fin, vector<string> &parts);
 
 std::map<std::string, pss > OPTAB;
-std::map<std::string, std::string> SYMTAB;
+std::map<std::string, pss> SYMTAB;
 std::map<std::string, Block> BLOCKTAB;
 
 string programName;
@@ -53,7 +53,7 @@ int initSymTab(string projectRoot) {
         string line;
         while (getline(fin, line)) {
             string *parts = split(line);
-            auto val = std::pair<string, string>(parts[0], parts[1]);
+            auto val = std::pair<string, pss >(parts[0], pss(parts[1], ""));
             SYMTAB.insert(val);
         }
         fin.close();
@@ -106,7 +106,7 @@ bool compare(pair<string, Block> a, pair<string, Block> b) {
     return a.second.index < b.second.index;
 }
 
-void updateBlockAddr() {
+Block updateBlockAddr() {
     vector<pair<string, Block>> blocks;
     for (auto x: BLOCKTAB) {
         blocks.emplace_back(x);
@@ -119,4 +119,5 @@ void updateBlockAddr() {
                 hexStrToInt(lastBlockInfo.blockLength) + hexStrToInt(lastBlockInfo.blockAddr));
         BLOCKTAB.find(blocks[i].first)->second.blockAddr = currBlockInfo.blockAddr;
     }
+    return blocks[blocks.size() - 1].second;
 }

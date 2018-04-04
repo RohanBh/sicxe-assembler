@@ -27,7 +27,7 @@ public:
 };
 
 extern std::map<std::string, pss > OPTAB;
-extern std::map<std::string, std::string> SYMTAB;
+extern std::map<std::string, pss> SYMTAB;
 extern std::map<std::string, Block> BLOCKTAB;
 
 
@@ -44,6 +44,6 @@ readLine(std::ifstream &fin, std::vector<std::string> &parts);
 
 void insertBlock(std::string blockName, Block blockInfo);
 
-void updateBlockAddr();
+Block updateBlockAddr();
 
 #endif //SICXE_ASSEMBLER_COMMONS_H

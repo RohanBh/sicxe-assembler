@@ -41,6 +41,9 @@ string handleImmediateIntegerOperand(string opcodeHex, const string &operand, ch
 
 template<typename T>
 bool isRegisterValid(T it1, const string &operand);
+
+template<typename T>
+string getSymbolAddr(T it_sym);
 /* =========================================== */
 
 /* ========== Methods to write the records to the object file ========== */
@@ -48,7 +51,7 @@ void writeHeaderRecord(ofstream &fout);
 
 void writeTextRecord(ostream &fout, string &textRecord, string &objectCode);
 
-void writeEndRecord(ofstream &fout, string operand);
+void writeEndRecord(ofstream &fout, const string &operand);
 
 /* ===================================================================== */
 
@@ -72,18 +75,19 @@ string createObjectFile(std::string intermediateFile) {
     string modificationRecord = "";
     bool shouldAddMRecord = startAddr == 0;
     bool canUseBase = false;
+    string currBlock = "DEFAULT";
     while (readLine(fin, line)) {
         // Skip the line if it's empty or contains on the location counter's value
         if (line.empty() || line.size() == 1) {
             continue;
         }
-        locctr = line[0];
+        locctr = intToHexStr(hexStrToInt(BLOCKTAB.find(currBlock)->second.blockAddr) + hexStrToInt(line[0]));
         initVariables(line, label, opcode, operand);
         if (opcode == "START") {
             writeHeaderRecord(fout);
         } else if (opcode == "BASE") {
             auto it_sym = SYMTAB.find(operand);
-            baseLocHex = it_sym->second;
+            baseLocHex = getSymbolAddr(it_sym);
             canUseBase = true;
         } else if (opcode == "NOBASE") {
             canUseBase = false;
@@ -94,6 +98,13 @@ string createObjectFile(std::string intermediateFile) {
             }
             writeEndRecord(fout, operand);
             break;
+        } else if (opcode == "USE") {
+            writeTextRecord(fout, textRecord, objectCode);
+            if (operand.empty()) {
+                currBlock = "DEFAULT";
+            } else {
+                currBlock = operand;
+            }
         } else {
             auto it_op = OPTAB.safeFind(opcode);
             string instructionHex = "";
@@ -190,7 +201,7 @@ string createObjectFile(std::string intermediateFile) {
                             auto it1 = SYMTAB.find(r1);
                             auto it2 = SYMTAB.find(r2);
                             if (isRegisterValid(it1, operand) && isRegisterValid(it2, operand)) {
-                                instructionHex = assInstr_2(instrInfo.second, it1->second, it2->second);
+                                instructionHex = assInstr_2(instrInfo.second, it1->second.first, it2->second.first);
                             }
                         }
                         break;
@@ -200,7 +211,7 @@ string createObjectFile(std::string intermediateFile) {
                         auto it_sym = SYMTAB.find(operand);
                         if (it_sym != SYMTAB.end()) {
                             if (instrInfo.first == "2") {
-                                instructionHex = assInstr_2(instrInfo.second, it_sym->second, "0");
+                                instructionHex = assInstr_2(instrInfo.second, it_sym->second.first, "0");
                             } else if (instrInfo.first == "3/4") {
                                 // Handle this case in the end to avoid code duplication
                                 shouldHandle = true;
@@ -218,7 +229,7 @@ string createObjectFile(std::string intermediateFile) {
                     int pcRelOp = calcPCRelOperand(it_op, locctr, opcode[0], sym_it);
                     int baseRelOp = canUseBase ? calcBaseRelOperand(baseLocHex, sym_it) : -1;
                     if (opcode[0] == '+') {
-                        instructionHex = assInstr_34(instrInfo.second, ni, x + 1, hexStrToInt(sym_it->second));
+                        instructionHex = assInstr_34(instrInfo.second, ni, x + 1, hexStrToInt(getSymbolAddr(sym_it)));
                         if (shouldAddMRecord) {
                             int addrFieldStartLoc = hexStrToInt(locctr) + 1;
                             modificationRecord += ("M" + intToHexStr(addrFieldStartLoc) + "05\n");
@@ -351,7 +362,7 @@ bool isRegisterValid(T it1, const string &operand) {
         cerr << "Invalid register symbol: " << operand << "\n";
         return false;
     }
-    if (stoi(it1->second) < 0 || stoi(it1->second) > 9 || stoi(it1->second) == 7) {
+    if (stoi(it1->second.first) < 0 || stoi(it1->second.first) > 9 || stoi(it1->second.first) == 7) {
         cerr << "Expected a register, found: " << it1->first << "\n";
         return false;
     }
@@ -372,7 +383,7 @@ string assInstr_2(string opcodeHex, string r1, string r2) {
 }
 
 string assInstr_34(string opcodeHex, int ni, int xbpe, int actualOperandVal) {
-    int opcode_dec = hexStrToInt(opcodeHex);
+    int opcode_dec = hexStrToInt(std::move(opcodeHex));
     opcode_dec += ni;
     int finalInstr = 0;
     int size;
@@ -396,15 +407,15 @@ bool checkBaseRel(int operandVal) {
 
 template<typename T, typename U>
 int calcPCRelOperand(T it_op, string locctr, char opcode_first_char, U it_sym) {
-    int pcPos = getNextInstrAdd(it_op, hexStrToInt(locctr), opcode_first_char);
-    int symVal = hexStrToInt(it_sym->second);
+    int pcPos = getNextInstrAdd(it_op, hexStrToInt(std::move(locctr)), opcode_first_char);
+    int symVal = hexStrToInt(getSymbolAddr(it_sym));
     return symVal - pcPos;
 }
 
 template<typename T>
 int calcBaseRelOperand(string baseHex, T it_sym) {
-    int basePos = hexStrToInt(baseHex);
-    int symVal = hexStrToInt(it_sym->second);
+    int basePos = hexStrToInt(std::move(baseHex));
+    int symVal = hexStrToInt(getSymbolAddr(it_sym));
     return symVal - basePos;
 }
 
@@ -425,7 +436,7 @@ void writeHeaderRecord(ofstream &fout) {
 }
 
 void writeTextRecord(ostream &fout, string &textRecord, string &objectCode) {
-    int totalBytes = static_cast<int>(objectCode.size() / 2);
+    auto totalBytes = static_cast<int>(objectCode.size() / 2);
     if (totalBytes == 0) {
         textRecord = "T";
         objectCode = "";
@@ -439,12 +450,20 @@ void writeTextRecord(ostream &fout, string &textRecord, string &objectCode) {
     objectCode = "";
 }
 
-void writeEndRecord(ofstream &fout, string operand) {
+void writeEndRecord(ofstream &fout, const string &operand) {
     string firstExIntrHex = intToHexStr(startAddr);
     if (!operand.empty()) {
         auto it = SYMTAB.find(operand);
-        firstExIntrHex = it->second;
+        firstExIntrHex = it->second.first;
     }
     toUpper(firstExIntrHex);
     fout << "E" << firstExIntrHex;
+}
+
+template<typename T>
+string getSymbolAddr(T it_sym) {
+    auto it = BLOCKTAB.find(it_sym->second.second);
+    string blockStartAddr = it->second.blockAddr;
+    string symbolBlockRelAddr = it_sym->second.first;
+    return intToHexStr(hexStrToInt(blockStartAddr) + hexStrToInt(symbolBlockRelAddr));
 }
